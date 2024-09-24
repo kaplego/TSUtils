@@ -1,0 +1,77 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "build",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [],
+			"label": "NPM_Build",
+			"detail": "tsc",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": false,
+				"close": true,
+				"revealProblems": "onProblem"
+			},
+			"icon": { "color": "terminal.ansiYellow", "id": "server-process" }
+		},
+		{
+			"type": "npm",
+			"script": "lint",
+			"problemMatcher": [],
+			"label": "NPM_Lint",
+			"detail": "eslint",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": false,
+				"close": true,
+				"revealProblems": "onProblem"
+			},
+			"icon": { "color": "terminal.ansiBlue", "id": "file-code" },
+			"dependsOn": ["RM Dist"]
+		},
+		{
+			"label": "RM Dist",
+			"type": "shell",
+			"command": "rm dist -rdf",
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": false,
+				"close": true,
+				"revealProblems": "onProblem"
+			},
+			"icon": { "color": "terminal.ansiRed", "id": "trash" },
+			"linux": {
+				"command": "rm",
+				"args": [
+					"dist",
+					"-rdf"
+				]
+			},
+			"windows": {
+				"command": ".\\remove.ps1"
+			},
+		},
+		{
+			"label": "Build & Lint",
+			"dependsOn": ["NPM_Lint", "NPM_Build"],
+			"dependsOrder": "sequence"
+		}
+	]
+}

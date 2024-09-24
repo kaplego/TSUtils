@@ -1,0 +1,14 @@
+{
+	"configurations": [
+		{
+			"name": "Launch Program",
+			"program": "${workspaceFolder}/dist/main",
+			"request": "launch",
+			"skipFiles": ["<node_internals>/**"],
+			"type": "node",
+			"preLaunchTask": "Build & Lint",
+			"sourceMaps": true,
+			"console": "integratedTerminal"
+		}
+	]
+}
