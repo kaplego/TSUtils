@@ -1,4 +1,3 @@
-import 'colors';
 import InteractiveConsole, { Command } from './InteractiveConsole';
 
 const ic = new InteractiveConsole('console'.yellow + ' > '.reset, (_rl, cmd, args, flags) => {
@@ -18,6 +17,8 @@ ic.commands.add(
 		'test',
 		[
 			{
+				name: 'Movie',
+				description: null,
 				isMandatory: true,
 				completer(arg) {
 					return ['TPM', 'AOTC', 'ROTS', 'ANH', 'TESB', 'ROTJ', 'Solo', 'RogueOne'].filter((film) =>
@@ -28,7 +29,13 @@ ic.commands.add(
 		],
 		[
 			{
+				name: 'test1',
+				isValueFlag: false,
+				short: 't'
+			},
+			{
 				name: 'salut',
+				isValueFlag: true,
 				short: 's',
 			},
 		]

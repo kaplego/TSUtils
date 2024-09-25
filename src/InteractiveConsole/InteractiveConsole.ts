@@ -1,3 +1,4 @@
+import 'colors';
 import * as readline from 'readline';
 
 const REGEXP_NAME = new RegExp(/^[a-z][a-z0-9-_]{0,31}$/);
@@ -5,12 +6,33 @@ const REGEXP_FLAG_NAME = new RegExp(/^[a-zA-Z][a-zA-Z0-9-_]{0,31}$/);
 const REGEXP_FLAG_SHORT = new RegExp(/^[a-zA-Z]$/);
 
 interface ICommandArgument {
+	name: string;
+	description: string | null;
 	isMandatory: boolean;
 	completer: (arg: string) => string[];
 }
-interface ICommandFlag {
+
+interface ICommandBaseFlag {
 	name: string;
+	isValueFlag: boolean;
 	short?: string;
+}
+interface ICommandFlag extends ICommandBaseFlag {
+	isValueFlag: false;
+}
+interface ICommandValueFlag extends ICommandBaseFlag {
+	name: string;
+	isValueFlag: true;
+}
+type CommandAnyFlag = ICommandFlag | ICommandValueFlag;
+
+interface ICommandResultArg {
+	argName: string;
+	value: string;
+}
+interface ICommandResultFlag {
+	flagName: string;
+	value: string | null;
 }
 
 class CommandManager {
@@ -63,9 +85,9 @@ export class Command {
 	public readonly name: string;
 	private _aliases: string[];
 	private _arguments: ICommandArgument[];
-	private _flags: ICommandFlag[];
+	private _flags: CommandAnyFlag[];
 
-	constructor(name: string, args?: ICommandArgument[], flags?: ICommandFlag[], aliases?: string[]) {
+	constructor(name: string, args?: ICommandArgument[], flags?: CommandAnyFlag[], aliases?: string[]) {
 		if (!REGEXP_NAME.test(name))
 			throw new CommandError(
 				null,
@@ -100,7 +122,7 @@ export class Command {
 				throw new CommandError(this, `Flag name '${flag.name}' does not match ${REGEXP_FLAG_NAME.source}.`);
 
 			if (flag.short && !REGEXP_FLAG_SHORT.test(flag.short))
-				throw new CommandError(this, `Flag short '${flag.name}' does not match ${REGEXP_FLAG_SHORT.source}.`);
+				throw new CommandError(this, `Flag short '${flag.short}' does not match ${REGEXP_FLAG_SHORT.source}.`);
 
 			if (prev.includes(flag.name) || (flag.short && prev.includes(flag.short)))
 				throw new CommandError(this, `Flag ${flag.name} is declared twice.`);
@@ -146,7 +168,7 @@ export class Command {
 		return [...this._flags];
 	}
 
-	public hasFlag(flag: string, includeShorts: boolean = false) {
+	public getFlag(flag: string, includeShorts: boolean = false) {
 		return this._flags.find((f) => f.name === flag || (includeShorts && f.short === flag));
 	}
 }
@@ -163,8 +185,8 @@ class CommandError extends Error {
 export type OnCommandCallback = (
 	readline: readline.Interface,
 	command: Command,
-	args: string[],
-	flags?: ICommandFlag[]
+	args: ICommandResultArg[],
+	flags: ICommandResultFlag[]
 ) => Promise<unknown>;
 
 /**
@@ -216,9 +238,9 @@ export default class InteractiveConsole {
 		this.readline.on('line', async (rawInp) => {
 			this.readline.pause();
 
-			const inp = rawInp.trim().toLowerCase();
+			const inp = rawInp.trim();
 			const allArgs = this.parseCommand(inp);
-			const commandName = allArgs.shift();
+			const commandName = allArgs.shift().toLowerCase();
 
 			const command = this.commands.findByName(commandName, true);
 
@@ -228,28 +250,100 @@ export default class InteractiveConsole {
 				return;
 			}
 
-			const flags = [],
-				args = [];
+			const flags: ICommandResultFlag[] = [],
+				args: ICommandResultArg[] = [];
 
+			let previousValueFlag: ICommandValueFlag | null = null;
 			for (const arg of allArgs) {
 				if (arg.startsWith('--')) {
-					if (!command.hasFlag(arg.slice(2))) {
-						console.log(`Unknown flag '${arg.slice(2)}'`);
+					if (previousValueFlag !== null) {
+						console.log(
+							`Missing value for flag '${previousValueFlag.name}'. ` +
+								`Run \`help ${command.name}\` to list available flags.`
+						);
 						this.readline.prompt();
 						return;
 					}
-					flags.push(arg.slice(2));
+
+					const flag = command.getFlag(arg.toLowerCase().slice(2));
+					if (!flag) {
+						console.log(
+							`Unknown flag '${arg.slice(2)}'. ` +
+								`Run \`help ${command.name}\` to list available flags.`
+						);
+						this.readline.prompt();
+						return;
+					}
+					if (!flag.isValueFlag)
+						flags.push({
+							flagName: flag.name,
+							value: null,
+						});
+					else previousValueFlag = flag;
 				} else if (arg.startsWith('-')) {
-					for (const shortArg of arg.slice(1))
-					{
-						if (!command.hasFlag(shortArg, true)) {
-							console.log(`Unknown flag '${shortArg}'`);
+					if (previousValueFlag !== null) {
+						console.log(
+							`Missing value for flag '${previousValueFlag.name}'. ` +
+								`Run \`help ${command.name}\` to list available flags.`
+						);
+						this.readline.prompt();
+						return;
+					}
+
+					if (/-.=.*/.test(arg)) {
+						const [flagName, value] = arg.slice(1).split('=', 2);						
+						const flag = command.getFlag(flagName, true);
+						if (!flag) {
+							console.log(
+								`Unknown flag '${flagName}'. ` +
+									`Run \`help ${command.name}\` to list available flags.`
+							);
 							this.readline.prompt();
 							return;
 						}
-						flags.push(shortArg);
-					}
-				} else args.push(arg);
+
+						flags.push({
+							flagName: flag.name,
+							value: value.replace(/^["']|["']$/g, ''),
+						});
+					} else
+						for (const flagName of arg.slice(1)) {
+							const flag = command.getFlag(flagName, true);
+							if (!flag) {
+								console.log(
+									`Unknown flag '${flagName}'. Run \`help ${command.name}\` to list available flags.`
+								);
+								this.readline.prompt();
+								return;
+							}
+
+							if (!flag.isValueFlag) {
+								flags.push({
+									flagName: flag.name,
+									value: null,
+								});
+							} else {
+								console.log(
+									`Missing value for flag '${flagName}'. ` +
+										`Run \`help ${command.name}\` to list available flags.`
+								);
+								this.readline.prompt();
+								return;
+							}
+						}
+				} else {
+					if (previousValueFlag !== null) {
+						flags.push({
+							flagName: previousValueFlag.name,
+							value: arg,
+						});
+						previousValueFlag = null;
+					} else
+						args.push({
+							argName: command.arguments[args.length].name,
+							value: arg,
+						});
+				}
 			}
 
 			const commandArgs = command.argumentCount;
@@ -258,17 +352,12 @@ export default class InteractiveConsole {
 				console.log(
 					`Expected ${
 						commandArgs[0] === commandArgs[1] ? commandArgs[0] : commandArgs.join('-')
-					} argument(s), ${args.length} given.`
+					} argument(s), ${args.length} given. Run \`help ${command.name}\` to see command configuration.`
 				);
 				this.readline.prompt();
 				return;
 			}
-			await this.onCommand(
-				this.readline,
-				command,
-				args,
-				flags.map((f) => command.flags.find((flag) => flag.name === f || flag.short === f))
-			);
+			await this.onCommand(this.readline, command, args, flags);
 			this.readline.prompt();
 		});
 	}
@@ -282,14 +371,14 @@ export default class InteractiveConsole {
 	}
 
 	parseCommand(command: string): string[] {
-		const regex = /"([^"]*)"|'([^']*)'|(\S+)/g;
+		const regex = /(-[^"']=)?("([^"]*)"|'([^']*)'|(\S+))/g;
 		let match: any[];
 		const args = [];
-	
+
 		while ((match = regex.exec(command)) !== null) {
-			args.push(match[1] || match[2] || match[0]);
+			args.push(match[0] ?? match[1] ?? match[2]);
 		}
-	
+
 		return args;
 	}
 
