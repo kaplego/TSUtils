@@ -21,7 +21,29 @@
 				"close": true,
 				"revealProblems": "onProblem"
 			},
-			"icon": { "color": "terminal.ansiYellow", "id": "server-process" }
+			"icon": { "color": "terminal.ansiYellow", "id": "beaker" }
+		},
+		{
+			"type": "npm",
+			"script": "test",
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			},
+			"problemMatcher": [],
+			"label": "NPM_Test",
+			"detail": "jest",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": false,
+				"close": true,
+				"revealProblems": "onProblem"
+			},
+			"icon": { "color": "terminal.ansiBlue", "id": "server-process" }
 		},
 		{
 			"type": "npm",
@@ -39,7 +61,7 @@
 				"close": true,
 				"revealProblems": "onProblem"
 			},
-			"icon": { "color": "terminal.ansiBlue", "id": "file-code" },
+			"icon": { "color": "terminal.ansiGreen", "id": "file-code" },
 			"dependsOn": ["RM Dist"]
 		},
 		{
@@ -63,8 +85,8 @@
 			}
 		},
 		{
-			"label": "Build & Lint",
-			"dependsOn": ["NPM_Lint", "NPM_Build"],
+			"label": "Run all tasks",
+			"dependsOn": ["NPM_Lint", "NPM_Build", "NPM_Test"],
 			"dependsOrder": "sequence"
 		}
 	]

@@ -2,11 +2,11 @@
 	"configurations": [
 		{
 			"name": "Launch Program",
-			"program": "${workspaceFolder}/dist/main",
+			"program": "${workspaceFolder}/dist/run",
 			"request": "launch",
 			"skipFiles": ["<node_internals>/**"],
 			"type": "node",
-			"preLaunchTask": "Build & Lint",
+			"preLaunchTask": "Run all tasks",
 			"sourceMaps": true,
 			"console": "integratedTerminal"
 		}

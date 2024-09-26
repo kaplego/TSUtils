@@ -59,7 +59,7 @@ const config = [
 				{
 					cspell: {
 						language: 'en-GB',
-						words: ['vars'],
+						words: ['vars', 'flexbox'],
 					},
 					checkIdentifiers: false,
 				},
