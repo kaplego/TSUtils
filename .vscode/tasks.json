@@ -45,7 +45,8 @@
 		{
 			"label": "RM Dist",
 			"type": "shell",
-			"command": "rm dist -rdf",
+			"command": "rm",
+			"args": ["dist", "-rdf"],
 			"presentation": {
 				"echo": true,
 				"reveal": "silent",
@@ -57,16 +58,9 @@
 				"revealProblems": "onProblem"
 			},
 			"icon": { "color": "terminal.ansiRed", "id": "trash" },
-			"linux": {
-				"command": "rm",
-				"args": [
-					"dist",
-					"-rdf"
-				]
-			},
 			"windows": {
 				"command": ".\\remove.ps1"
-			},
+			}
 		},
 		{
 			"label": "Build & Lint",

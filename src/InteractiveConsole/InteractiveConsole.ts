@@ -281,7 +281,7 @@ export default class InteractiveConsole {
 				new Command(
 					'clear',
 					() => {
-						console.clear();
+						process.stdout.write('\x1Bc');
 					},
 					[],
 					[],
@@ -356,8 +356,7 @@ export default class InteractiveConsole {
 					const flag = command.getFlag(arg.toLowerCase().slice(2));
 					if (!flag) {
 						console.log(
-							`Unknown flag '${arg.slice(2)}'. ` +
-								`Run \`help ${command.name}\` to list available flags.`
+							`Unknown flag '${arg.slice(2)}'. ` + `Run \`help ${command.name}\` to list available flags.`
 						);
 						this.readline.prompt();
 						return;
@@ -379,8 +378,7 @@ export default class InteractiveConsole {
 						const flag = command.getFlag(flagName, true);
 						if (!flag) {
 							console.log(
-								`Unknown flag '${flagName}'. ` +
-									`Run \`help ${command.name}\` to list available flags.`
+								`Unknown flag '${flagName}'. ` + `Run \`help ${command.name}\` to list available flags.`
 							);
 							this.readline.prompt();
 							return;
