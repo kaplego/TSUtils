@@ -1,4 +1,4 @@
-import 'colors';
+import { bold } from 'colors';
 import * as readline from 'readline';
 
 const REGEXP_NAME = new RegExp(/^[a-z][a-z0-9-_]{0,31}$/);
@@ -7,7 +7,7 @@ const REGEXP_FLAG_SHORT = new RegExp(/^[a-zA-Z]$/);
 
 interface ICommandArgument {
 	name: string;
-	description: string | null;
+	description?: string;
 	isMandatory: boolean;
 	completer: (arg: string) => string[];
 }
@@ -16,6 +16,7 @@ interface ICommandBaseFlag {
 	name: string;
 	isValueFlag: boolean;
 	short?: string;
+	description?: string;
 }
 interface ICommandFlag extends ICommandBaseFlag {
 	isValueFlag: false;
@@ -26,14 +27,15 @@ interface ICommandValueFlag extends ICommandBaseFlag {
 }
 type CommandAnyFlag = ICommandFlag | ICommandValueFlag;
 
-interface ICommandResultArg {
-	argName: string;
-	value: string;
-}
-interface ICommandResultFlag {
-	flagName: string;
-	value: string | null;
-}
+type CommandResultArg = Map<string, string>;
+
+type CommandResultFlag = Map<string, string | null>;
+
+type CommandCallback = (
+	interactiveConsole: InteractiveConsole,
+	args: CommandResultArg,
+	flags: CommandResultFlag
+) => unknown | Promise<unknown>;
 
 class CommandManager {
 	private _commands: Command[] = [];
@@ -76,6 +78,10 @@ class CommandManager {
 		return this.find((command) => command.name === name || (includeAliases && command.hasAlias(name)));
 	}
 
+	public filter(filter: (command: Command, index: number) => boolean) {
+		return this._commands.filter((c, i) => filter(c, i));
+	}
+
 	public freeze() {
 		this._freezed = true;
 	}
@@ -86,8 +92,17 @@ export class Command {
 	private _aliases: string[];
 	private _arguments: ICommandArgument[];
 	private _flags: CommandAnyFlag[];
+	public readonly callback: CommandCallback;
+	public readonly description?: string;
 
-	constructor(name: string, args?: ICommandArgument[], flags?: CommandAnyFlag[], aliases?: string[]) {
+	constructor(
+		name: string,
+		callback: CommandCallback,
+		args?: ICommandArgument[],
+		flags?: CommandAnyFlag[],
+		aliases?: string[],
+		description?: string
+	) {
 		if (!REGEXP_NAME.test(name))
 			throw new CommandError(
 				null,
@@ -130,6 +145,9 @@ export class Command {
 			return flag.short ? [...prev, flag.name, flag.short] : [...prev, flag.name];
 		}, []);
 		this._flags = flags ?? [];
+
+		this.callback = callback;
+		this.description = description;
 	}
 
 	public get aliases() {
@@ -182,26 +200,96 @@ class CommandError extends Error {
 	}
 }
 
-export type OnCommandCallback = (
-	readline: readline.Interface,
-	command: Command,
-	args: ICommandResultArg[],
-	flags: ICommandResultFlag[]
-) => Promise<unknown>;
-
 /**
  * An interactive console in the terminal.
  */
 export default class InteractiveConsole {
 	public readonly prompt: string;
 	public readonly commands: CommandManager;
-	private readonly onCommand: OnCommandCallback;
 	private readonly readline: readline.Interface;
 	private started = false;
 
-	constructor(prompt: string, onCommand: OnCommandCallback) {
+	constructor(prompt: string) {
+		const self = this;
+
 		this.commands = new CommandManager();
-		this.onCommand = onCommand;
+		this.commands
+			.add(
+				new Command(
+					'help',
+					(_, args) => {
+						const cmdArg = args.get('Command') ?? 'help';
+
+						const command = this.commands.findByName(cmdArg, true);
+						if (!command) return console.log(`Command '${cmdArg}' not found.`);
+
+						console.log(bold(`\n  ${command.name}`));
+						if (command.aliases && command.aliases.length > 0)
+							console.log(`    Aliases: ${command.aliases.join(', ')}`.italic);
+						console.log(`\n  ${command.description ?? 'No description'}`);
+
+						if (command.arguments.length > 0) {
+							console.log('\n\n  === Usage ===');
+							console.log(
+								`    ${command.name} ${command.arguments
+									.map((a) => (a.isMandatory ? a.name : `[${a.name}]`))
+									.join(' ')}`
+							);
+
+							console.log('\n\n  === Arguments ===');
+
+							command.arguments.forEach((arg) => {
+								console.log(bold(`\n  ${arg.name}`));
+								console.log(`    ${arg.isMandatory ? 'Mandatory' : 'Optional'}`);
+								console.log(`    ${arg.description ?? 'No description'}`);
+							});
+						}
+
+						if (command.flags.length > 0) {
+							console.log('\n\n  === Flags ===');
+
+							command.flags.forEach((flag) => {
+								console.log(bold(`\n  --${flag.name}`));
+								if (flag.short) console.log(`    Alias: -${flag.short}`.italic);
+								if (flag.isValueFlag) console.log('    Value flag');
+								console.log(`    ${flag.description ?? 'No description'}`);
+							});
+						}
+
+						console.log();
+					},
+					[
+						{
+							name: 'Command',
+							description: 'The command for which to get help.',
+							isMandatory: false,
+							completer(arg) {
+								return self.commands.list().reduce<string[]>((prev, command) => {
+									if (command.name.startsWith(arg)) prev.push(command.name);
+									prev.push(...command.aliases.filter((alias) => alias.startsWith(arg)));
+									return prev;
+								}, []);
+							},
+						},
+					],
+					[],
+					['h', 'man'],
+					'Returns command details, arguments and flags.'
+				)
+			)
+			.add(
+				new Command(
+					'clear',
+					() => {
+						console.clear();
+					},
+					[],
+					[],
+					['cls'],
+					'Clears the console'
+				)
+			);
+
 		this.prompt = prompt;
 		this.readline = readline.createInterface({
 			input: process.stdin,
@@ -250,8 +338,8 @@ export default class InteractiveConsole {
 				return;
 			}
 
-			const flags: ICommandResultFlag[] = [],
-				args: ICommandResultArg[] = [];
+			const flags: Map<string, string | null> = new Map(),
+				args: Map<string, string> = new Map();
 
 			let previousValueFlag: ICommandValueFlag | null = null;
 			for (const arg of allArgs) {
@@ -274,11 +362,7 @@ export default class InteractiveConsole {
 						this.readline.prompt();
 						return;
 					}
-					if (!flag.isValueFlag)
-						flags.push({
-							flagName: flag.name,
-							value: null,
-						});
+					if (!flag.isValueFlag) flags.set(flag.name, null);
 					else previousValueFlag = flag;
 				} else if (arg.startsWith('-')) {
 					if (previousValueFlag !== null) {
@@ -291,7 +375,7 @@ export default class InteractiveConsole {
 					}
 
 					if (/-.=.*/.test(arg)) {
-						const [flagName, value] = arg.slice(1).split('=', 2);						
+						const [flagName, value] = arg.slice(1).split('=', 2);
 						const flag = command.getFlag(flagName, true);
 						if (!flag) {
 							console.log(
@@ -302,10 +386,7 @@ export default class InteractiveConsole {
 							return;
 						}
 
-						flags.push({
-							flagName: flag.name,
-							value: value.replace(/^["']|["']$/g, ''),
-						});
+						flags.set(flag.name, value.replace(/^["']|["']$/g, ''));
 					} else
 						for (const flagName of arg.slice(1)) {
 							const flag = command.getFlag(flagName, true);
@@ -318,10 +399,7 @@ export default class InteractiveConsole {
 							}
 
 							if (!flag.isValueFlag) {
-								flags.push({
-									flagName: flag.name,
-									value: null,
-								});
+								flags.set(flag.name, null);
 							} else {
 								console.log(
 									`Missing value for flag '${flagName}'. ` +
@@ -333,31 +411,24 @@ export default class InteractiveConsole {
 						}
 				} else {
 					if (previousValueFlag !== null) {
-						flags.push({
-							flagName: previousValueFlag.name,
-							value: arg,
-						});
+						flags.set(previousValueFlag.name, arg);
 						previousValueFlag = null;
-					} else
-						args.push({
-							argName: command.arguments[args.length].name,
-							value: arg,
-						});
+					} else args.set(command.arguments[args.size].name, arg);
 				}
 			}
 
 			const commandArgs = command.argumentCount;
 
-			if (args.length < commandArgs[0] || args.length > commandArgs[1]) {
+			if (args.size < commandArgs[0] || args.size > commandArgs[1]) {
 				console.log(
 					`Expected ${
 						commandArgs[0] === commandArgs[1] ? commandArgs[0] : commandArgs.join('-')
-					} argument(s), ${args.length} given. Run \`help ${command.name}\` to see command configuration.`
+					} argument(s), ${args.size} given. Run \`help ${command.name}\` to see command configuration.`
 				);
 				this.readline.prompt();
 				return;
 			}
-			await this.onCommand(this.readline, command, args, flags);
+			await command.callback(this, args, flags);
 			this.readline.prompt();
 		});
 	}
