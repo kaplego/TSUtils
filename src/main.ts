@@ -1,1 +1,1 @@
-import './InteractiveConsole/InteractiveConsole-test';
+import './InteractiveConsole/InteractiveConsole.test';

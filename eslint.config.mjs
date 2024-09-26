@@ -1,5 +1,6 @@
 import typescriptParser from '@typescript-eslint/parser';
 import typescriptPlugin from '@typescript-eslint/eslint-plugin';
+import cspellPlugin from '@cspell/eslint-plugin';
 
 /** @satisfies {import('eslint').Linter.Config} */
 const config = [
@@ -48,6 +49,24 @@ const config = [
 		},
 		languageOptions: {
 			parser: typescriptParser,
+		},
+	},
+	{
+		ignores: ['**/*.test.ts'],
+		rules: {
+			'@cspell/spellchecker': [
+				'warn',
+				{
+					cspell: {
+						language: 'en-GB',
+						words: ['vars'],
+					},
+					checkIdentifiers: false,
+				},
+			],
+		},
+		plugins: {
+			'@cspell': cspellPlugin,
 		},
 	},
 ];

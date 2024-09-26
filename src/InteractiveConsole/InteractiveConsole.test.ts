@@ -29,7 +29,7 @@ ic.commands
 					short: 't',
 				},
 				{
-					name: 'salut',
+					name: 'Hello',
 					isValueFlag: true,
 					short: 's',
 				},

@@ -39,7 +39,7 @@ type CommandCallback = (
 
 class CommandManager {
 	private _commands: Command[] = [];
-	private _freezed: boolean = false;
+	private _frozen: boolean = false;
 
 	private nameExists(name: string, includeAliases: boolean = true): boolean {
 		for (const command of this._commands) {
@@ -54,14 +54,14 @@ class CommandManager {
 	}
 
 	public add(command: Command) {
-		if (this._freezed) throw new Error('Cannot add commands while CommandManager is freezed.');
+		if (this._frozen) throw new Error('Cannot add commands while CommandManager is frozen.');
 		if (this.nameExists(command.name)) throw new CommandError(command, 'Command name already exists.');
 		this._commands.push(command);
 		return this;
 	}
 
 	public remove(filter: (command: Command, index: number) => boolean) {
-		if (this._freezed) throw new Error('Cannot remove commands while CommandManager is freezed.');
+		if (this._frozen) throw new Error('Cannot remove commands while CommandManager is frozen.');
 		this._commands = this._commands.filter((c, i) => filter(c, i));
 		return this;
 	}
@@ -83,7 +83,7 @@ class CommandManager {
 	}
 
 	public freeze() {
-		this._freezed = true;
+		this._frozen = true;
 	}
 }
 
