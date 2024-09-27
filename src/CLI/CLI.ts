@@ -2,7 +2,7 @@ import { bold } from 'colors';
 import * as readline from 'readline';
 
 const REGEXP_NAME = new RegExp(/^[a-z][a-z0-9-_]{0,31}$/);
-const REGEXP_FLAG_NAME = new RegExp(/^[a-zA-Z][a-zA-Z0-9-_]{0,31}$/);
+const REGEXP_FLAG_NAME = new RegExp(/^[a-z][a-z0-9-_]{0,15}$/);
 const REGEXP_FLAG_SHORT = new RegExp(/^[a-zA-Z]$/);
 
 interface ICommandArgument {
@@ -32,7 +32,7 @@ type CommandResultArg = Map<string, string>;
 type CommandResultFlag = Map<string, string | null>;
 
 type CommandCallback = (
-	interactiveConsole: InteractiveConsole,
+	interactiveConsole: CLI,
 	args: CommandResultArg,
 	flags: CommandResultFlag
 ) => unknown | Promise<unknown>;
@@ -203,7 +203,7 @@ class CommandError extends Error {
 /**
  * An interactive console in the terminal.
  */
-export default class InteractiveConsole {
+export default class CLI {
 	public readonly prompt: string;
 	public readonly commands: CommandManager;
 	private readonly readline: readline.Interface;

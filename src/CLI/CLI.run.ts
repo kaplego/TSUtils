@@ -1,8 +1,8 @@
-import InteractiveConsole, { Command } from './InteractiveConsole';
+import CLI, { Command } from './CLI';
 
-const ic = new InteractiveConsole('console'.yellow + ' > '.reset);
+const cli = new CLI('cli'.yellow + ' > '.reset);
 
-ic.commands
+cli.commands
 	.add(
 		new Command(
 			'test',
@@ -29,7 +29,7 @@ ic.commands
 					short: 't',
 				},
 				{
-					name: 'Hello',
+					name: 'hello',
 					isValueFlag: true,
 					short: 's',
 				},
@@ -37,4 +37,4 @@ ic.commands
 		)
 	);
 
-ic.init(' Interactive Console '.bgBlue.white + '\n'.reset);
+cli.init(' Command-Line Interface '.bgBlue.white + '\n'.reset);

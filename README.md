@@ -4,9 +4,9 @@
 
 TSUtils is a library of open-source utilities for TypeScript. It includes utilites such as an interactive console, and a CSS sorting function.
 
-# InteractiveConsole
+# CLI
 
-InteractiveConsole is a class that implements an interactive command-line interface, using Node.JS stdout and stdin, allowing users to enter commands and receive responses in a terminal.
+CLI is a class that implements an interactive command-line interface, using Node.JS stdout and stdin, and allowing users to enter commands and receive responses in a terminal.
 
 # SortCSS
 

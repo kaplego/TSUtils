@@ -1,1 +1,1 @@
-import './InteractiveConsole/InteractiveConsole.run';
+import './CLI/CLI.run';
