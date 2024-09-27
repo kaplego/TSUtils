@@ -286,7 +286,25 @@ export default class CLI {
 					[],
 					[],
 					['cls'],
-					'Clears the console'
+					'Clears the console.'
+				)
+			).add(
+				new Command(
+					'exit',
+					(_cli, _args, flags) => {
+						process.exit(flags.has('error') ? 1 : 0);
+					},
+					[],
+					[
+						{
+							name: 'error',
+							isValueFlag: false,
+							description: 'Stops the program with error code 1.',
+							short: 'E'
+						}
+					],
+					['stop'],
+					'Stops the program.'
 				)
 			);
 
@@ -347,7 +365,7 @@ export default class CLI {
 					if (previousValueFlag !== null) {
 						console.log(
 							`Missing value for flag '${previousValueFlag.name}'. ` +
-								`Run \`help ${command.name}\` to list available flags.`
+							`Run \`help ${command.name}\` to list available flags.`
 						);
 						this.readline.prompt();
 						return;
@@ -367,7 +385,7 @@ export default class CLI {
 					if (previousValueFlag !== null) {
 						console.log(
 							`Missing value for flag '${previousValueFlag.name}'. ` +
-								`Run \`help ${command.name}\` to list available flags.`
+							`Run \`help ${command.name}\` to list available flags.`
 						);
 						this.readline.prompt();
 						return;
@@ -401,7 +419,7 @@ export default class CLI {
 							} else {
 								console.log(
 									`Missing value for flag '${flagName}'. ` +
-										`Run \`help ${command.name}\` to list available flags.`
+									`Run \`help ${command.name}\` to list available flags.`
 								);
 								this.readline.prompt();
 								return;
@@ -419,8 +437,7 @@ export default class CLI {
 
 			if (args.size < commandArgs[0] || args.size > commandArgs[1]) {
 				console.log(
-					`Expected ${
-						commandArgs[0] === commandArgs[1] ? commandArgs[0] : commandArgs.join('-')
+					`Expected ${commandArgs[0] === commandArgs[1] ? commandArgs[0] : commandArgs.join('-')
 					} argument(s), ${args.size} given. Run \`help ${command.name}\` to see command configuration.`
 				);
 				this.readline.prompt();
