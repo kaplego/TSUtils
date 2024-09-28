@@ -1,1 +1,1 @@
-//import './CLI/CLI.run';
+import './CLI/CLI.run';
