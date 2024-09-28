@@ -1,0 +1,42 @@
+body {
+	/* Typography */
+	font-family: Arial, sans-serif;
+}
+
+.example {
+	/* Layout */
+	display: flex;
+	position: relative;
+	visibility: hidden;
+	/* Box Model */
+	width: 300px;
+	height: 200px;
+	margin: 20px auto;
+	padding: 20px;
+	border: 1px solid #dee2e6;
+	/* Typography */
+	font-weight: bold;
+	text-align: center;
+	/* Color */
+	background-color: #f8f9fa;
+	/* Animation */
+	animation: none;
+}
+
+.text {
+	/* Typography */
+	font-size: 16px;
+	line-height: 1.5;
+	/* Color */
+	color: #343a40;
+}
+
+.flex {
+	/* Test comment #1 */
+	/* Layout */
+	display: flex;
+	/* Flexbox */
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}

@@ -3,8 +3,8 @@ import * as css from 'css';
 import * as detectIndent from 'identify-indent';
 
 export enum SortMethod {
-	Category,
-	Name,
+	ByCategory,
+	Alphabetical,
 }
 
 const CSS_CATEGORIES = {
@@ -113,29 +113,42 @@ function position(category: CSSCategory) {
 	return CSS_CATEGORY_POSITIONS.indexOf(category);
 }
 
-interface Config {
-	inputPath: string;
+interface ConfigOptions {
 	sortMethod?: SortMethod;
 	addCategoryComments?: boolean;
 }
 
-interface ConfigOutString extends Config {
-	outputType?: 'string';
-	outputPath?: undefined;
+interface ConfigInputString {
+	type: 'string';
+	data: string;
 }
-interface ConfigOutFile extends Config {
-	outputType?: 'file';
-	outputPath?: string;
+interface ConfigOutputString {
+	type: 'string';
+}
+interface ConfigFile {
+	type: 'file';
+	path: string;
 }
 
-export default function SortCSS<C extends ConfigOutString | ConfigOutFile>({
-	inputPath,
-	sortMethod = SortMethod.Category,
-	addCategoryComments = false,
-	outputType = 'string',
-	outputPath = undefined,
-}: C): C extends ConfigOutString ? string : void {
-	const input = fs.readFileSync(inputPath).toString();
+type ConfigInput = string | ConfigInputString | ConfigFile;
+type ConfigOutput = 'string' | ConfigOutputString | ConfigFile;
+
+export default function SortCSS<O extends ConfigOutput>(
+	inputConfig: ConfigInput,
+	outputConfig: ConfigOutput = 'string',
+	options: ConfigOptions = {
+		sortMethod: SortMethod.ByCategory,
+		addCategoryComments: false,
+	}
+): O extends ConfigOutputString ? string : void {
+	let input: string;
+	if (typeof inputConfig === 'string') input = inputConfig;
+	else if (inputConfig.type === 'string') input = inputConfig.data;
+	else input = fs.readFileSync(inputConfig.path).toString();
+
+	if (!options.sortMethod) options.sortMethod = SortMethod.ByCategory;
+	if (!options.addCategoryComments) options.addCategoryComments = false;
+
 	const indent = detectIndent.string(input);
 	const cssObj = css.parse(input);
 
@@ -143,11 +156,13 @@ export default function SortCSS<C extends ConfigOutString | ConfigOutFile>({
 		if (rule.type === 'rule') {
 			rule.declarations.sort((a, b) => {
 				if (a.type === 'declaration' && b.type === 'declaration') {
-					if (sortMethod === SortMethod.Category) {
+					if (options.sortMethod === SortMethod.ByCategory) {
+						// Get each category and compare their positions
 						const catA = category(a.property as CSSProperty);
 						const catB = category(b.property as CSSProperty);
 
 						if (catA === catB) {
+							// If the categories are the same, sort by property position
 							return CSS_CATEGORIES[catA].indexOf(a.property) - CSS_CATEGORIES[catB].indexOf(b.property);
 						} else return position(catA) - position(catB);
 					} else return a.property.localeCompare(b.property);
@@ -155,19 +170,27 @@ export default function SortCSS<C extends ConfigOutString | ConfigOutFile>({
 				return 0;
 			});
 
-			if (addCategoryComments)
+			if (options.addCategoryComments) {
 				rule.declarations = rule.declarations.reduce(
 					(prev, curr) => {
 						if (curr.type === 'declaration') {
+							// Check if the category is different than the previous one
 							const cat = category(curr.property);
 							if (prev[1] !== cat) {
-								prev[0].push({
-									type: 'comment',
-									comment: ` ${cat
+								// Check if there is already a comment for the category
+								const prevDecl = prev[0].at(-1),
+									categoryComment = ` ${cat
 										.replace(/[A-Z]/g, (s) => ` ${s}`)
-										.replace(/^./, (s) => s.toUpperCase())} `,
-									position: curr.position,
-								} as css.Comment);
+										.replace(/^./, (s) => s.toUpperCase())} `;
+
+								if (!prevDecl || prevDecl.type !== 'comment' || prevDecl.comment !== categoryComment)
+									// Add it if it does not exists
+									prev[0].push({
+										type: 'comment',
+										comment: categoryComment,
+										position: curr.position,
+									} as css.Comment);
+
 								prev[1] = cat;
 							}
 						}
@@ -177,6 +200,7 @@ export default function SortCSS<C extends ConfigOutString | ConfigOutFile>({
 					},
 					[[], null] as [(css.Declaration | css.Comment)[], string | null]
 				)[0];
+			}
 		}
 	});
 
@@ -185,6 +209,6 @@ export default function SortCSS<C extends ConfigOutString | ConfigOutFile>({
 			indent: (indent.character as string).repeat(indent.size),
 		}) + (input.endsWith('\n') ? '\n' : '');
 
-	if (outputType === 'string') return str as any;
-	else fs.writeFileSync(outputPath, str);
+	if (outputConfig === 'string' || outputConfig.type === 'string') return str as any;
+	else fs.writeFileSync(outputConfig.path, str);
 }
